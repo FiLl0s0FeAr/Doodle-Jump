@@ -5,40 +5,46 @@ public class LevelGeneratorScript : MonoBehaviour
 
     public GameObject platformPrefab;
 
-    public int numberOfPlatforms = 10; // Number of platforms to spawn per batch
-    public float levelWidth = 3.0f; // Horizontal range for platform spawn
-    public float minY = 1.0f; // Minimum vertical distance between platforms
-    public float maxY = 2.0f; // Maximum vertical distance between platforms
-    public float spawnThreshold = 10.0f; // Distance from the highest platform at which new platforms are spawned
+    public int numberOfPlatforms = 10; // Platforms per batch
+    public float levelWidth = 3.0f; // Horizontal range for spawning
+    public float minY = 1.0f; // Minimum vertical distance
+    public float maxY = 2.0f; // Maximum vertical distance
+    public float spawnThreshold = 10.0f; // Distance above which platforms spawn
 
-    private float highestPlatformY = 0f; // Tracks the highest platform's Y position
-    private Transform playerTransform; // Reference to the player's position
+    private float highestPlatformY = 0f; // Tracks the highest Y position
+    private Transform playerTransform; // Player's transform
     private Camera mainCamera;
 
     private void Start()
     {
-        // Find the player and main camera
+        // Find player and camera
         playerTransform = GameObject.FindWithTag("PlayerTag").transform;
         mainCamera = Camera.main;
 
-        // Spawn the initial platforms
+        // Spawn initial platforms
         SpawnPlatformBatch(0f, numberOfPlatforms);
     }
 
     private void Update()
     {
-        // Check if platforms need to be spawned ahead
+        // Spawn new platforms if the player approaches the highest platform
         if (playerTransform.position.y + spawnThreshold > highestPlatformY)
         {
             SpawnPlatformBatch(highestPlatformY, numberOfPlatforms);
         }
 
-        // Destroy platforms that fall below the camera
+        // Destroy platforms below the camera
         DestroyBelowCamera();
     }
 
     private void SpawnPlatformBatch(float startY, int platformCount)
     {
+        if (platformPrefab == null)
+        {
+            Debug.LogError("Platform Prefab is missing! Assign it in the Inspector.");
+            return; // Exit early if prefab is missing
+        }
+
         float spawnY = startY;
 
         for (int i = 0; i < platformCount; i++)
@@ -49,7 +55,11 @@ public class LevelGeneratorScript : MonoBehaviour
             Vector3 spawnPosition = new Vector3(spawnX, spawnY, 0f);
             Instantiate(platformPrefab, spawnPosition, Quaternion.identity);
 
-            highestPlatformY = Mathf.Max(highestPlatformY, spawnY);
+            // Update the highest platform Y position
+            if (spawnY > highestPlatformY)
+            {
+                highestPlatformY = spawnY;
+            }
         }
     }
 
@@ -58,7 +68,9 @@ public class LevelGeneratorScript : MonoBehaviour
         float cameraBottomY = mainCamera.transform.position.y - mainCamera.orthographicSize;
 
         // Find all platforms in the scene
-        foreach (GameObject platform in GameObject.FindGameObjectsWithTag("Platform"))
+        GameObject[] platforms = GameObject.FindGameObjectsWithTag("Platform");
+
+        foreach (GameObject platform in platforms)
         {
             if (platform.transform.position.y < cameraBottomY)
             {
